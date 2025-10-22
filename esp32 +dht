@@ -6,8 +6,8 @@ import dht
 from machine import Pin
 
 # Configuración WiFi
-SSID = "Sebas"
-PASSWORD = "1234sebas"
+SSID = "BUENO"
+PASSWORD = "12345678"
 
 # Nombre para intentar que aparezca en Fing (no garantizado en AP de MicroPython)
 HOSTNAME = "SensorDHT11"
