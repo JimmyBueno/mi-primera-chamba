@@ -1,0 +1,47 @@
+# slave_sensor1.py
+import network
+import socket
+import time
+import dht
+from machine import Pin
+
+# Configuración Wi-Fi
+SSID = "carvajal1"
+PASSWORD = "12345678"
+
+# Sensor DHT11 en GPIO15
+d = dht.DHT11(Pin(12))
+
+# Conectar al AP
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect(SSID, PASSWORD)
+
+print("Conectando a", SSID)
+while not wlan.isconnected():
+    time.sleep(0.5)
+    print(".", end="")
+
+print("\n Conectado. IP:", wlan.ifconfig()[0])
+
+# Enviar datos cada 5 segundos
+SERVER_IP = "192.168.4.1"
+SERVER_PORT = 8888
+
+while True:
+    try:
+        d.measure()
+        temp = d.temperature()
+        hum = d.humidity()
+        payload = f"sensor1:{temp},{hum}"
+        
+        # Conexión TCP
+        s = socket.socket()
+        s.connect((SERVER_IP, SERVER_PORT))
+        s.send(payload.encode())
+        s.close()
+        print(f" Enviado: {payload}")
+    except Exception as e:
+        print(" Error al leer o enviar:", e)
+    
+    time.sleep(5)  # Esperar 5 segundos
