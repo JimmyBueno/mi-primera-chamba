@@ -1,0 +1,67 @@
+import machine
+import time
+import st7789
+
+# --- Configuración de pines (ajusta si conectaste diferente) ---
+TFT_WIDTH = 240      # muchas pantallas 2.4" son 240x320
+TFT_HEIGHT = 320
+
+# Pines ESP32
+TFT_CS   = 5    # Chip Select
+TFT_DC   = 2    # Data/Command
+TFT_RST  = 4    # Reset
+
+# SPI por hardware (HSPI) en ESP32:
+# SCK  -> GPIO 18
+# MOSI -> GPIO 23
+# MISO no se usa
+spi = machine.SPI(
+    2,                       # ID 2 = HSPI (puede variar en tu firmware, pero es común)
+    baudrate=40_000_000,     # 40 MHz, si falla prueba 20_000_000
+    polarity=1,
+    phase=1,
+    sck=machine.Pin(18),
+    mosi=machine.Pin(23),
+    miso=machine.Pin(19)     # aunque no lo use, algunos drivers lo piden
+)
+
+# Crear objeto de pantalla
+tft = st7789.ST7789(
+    spi,
+    TFT_WIDTH,
+    TFT_HEIGHT,
+    reset=machine.Pin(TFT_RST, machine.Pin.OUT),
+    dc=machine.Pin(TFT_DC, machine.Pin.OUT),
+    cs=machine.Pin(TFT_CS, machine.Pin.OUT),
+    rotation=1               # prueba 0,1,2,3 para girar la orientación
+)
+
+def demo():
+    # Inicializar pantalla
+    tft.init()
+    
+    # Llenar fondo de negro
+    tft.fill(st7789.BLACK)
+    time.sleep(0.5)
+    
+    # Texto básico
+    tft.text("Hola ESP32!", 10, 10, st7789.WHITE)
+    tft.text("ST7789 + MicroPython", 10, 30, st7789.YELLOW)
+    
+    # Rectángulos de colores
+    tft.fill_rect(10, 60, 80, 40, st7789.RED)
+    tft.fill_rect(110, 60, 80, 40, st7789.GREEN)
+    tft.fill_rect(10, 120, 80, 40, st7789.BLUE)
+    tft.fill_rect(110, 120, 80, 40, st7789.CYAN)
+    
+    # Bucle sencillo de cambio de color de fondo
+    colors = [st7789.BLACK, st7789.RED, st7789.GREEN, st7789.BLUE, st7789.WHITE]
+    i = 0
+    while True:
+        tft.fill(colors[i % len(colors)])
+        tft.text("Color demo", 50, 150, st7789.BLACK if i % len(colors) == 4 else st7789.WHITE)
+        i += 1
+        time.sleep(0.5)
+
+# Ejecutar demo
+demo()
