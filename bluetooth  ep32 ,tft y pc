@@ -1,0 +1,118 @@
+#include "BluetoothSerial.h" 
+#include <SPI.h> // Necesario para la comunicación SPI de la pantalla
+#include <TFT_eSPI.h> // Librería principal para el control de la pantalla
+#include <XPT2046_Touchscreen.h> // Incluida por el usuario, aunque no se usa el touch
+
+// [1] Objeto de la pantalla TFT.
+// REQUIERE que hayas configurado correctamente el archivo User_Setup.h
+TFT_eSPI tft = TFT_eSPI(); 
+
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! 
+#endif
+
+BluetoothSerial SerialBT; 
+
+// [2] Variables globales para almacenar los datos recibidos
+String cpu_value = "0.0";
+String ram_value = "0.0";
+String temp_value = "0.0";
+
+void setup() {
+  Serial.begin(115200); 
+
+  // [3] Inicialización de la pantalla TFT
+  tft.init();
+  tft.setRotation(1); // Ajusta la rotación si es necesario (0, 1, 2, 3)
+  tft.fillScreen(TFT_BLACK); // Rellena la pantalla de negro al inicio
+
+  // Mensaje de inicio en la pantalla
+  tft.setTextSize(2);
+  tft.setTextColor(TFT_WHITE);
+  tft.drawString("Monitor PC v1.0", 10, 10);
+  tft.setTextSize(1);
+  tft.drawString("Esperando conexion BT...", 10, 40);
+
+  // [4] Inicialización de Bluetooth
+  SerialBT.begin("ESP32_Monitor_PC"); 
+  Serial.println("Servidor Bluetooth activo.");
+}
+
+void loop() {
+  if (SerialBT.available()) {
+    String datos_recibidos = SerialBT.readString(); 
+    
+    if (datos_recibidos.length() > 0) {
+      // [5] Formato esperado: "CPU:XX.X|RAM:YY.Y|TMP:ZZ.Z"
+      
+      // --- Extracción de valores ---
+      
+      // Extrae CPU (desde "CPU:" + 4 hasta el primer '|')
+      int cpu_start = datos_recibidos.indexOf("CPU:") + 4; 
+      int cpu_end = datos_recibidos.indexOf("|"); 
+      cpu_value = datos_recibidos.substring(cpu_start, cpu_end); 
+      
+      // Extrae RAM (desde "RAM:" + 4 hasta el segundo '|')
+      int ram_start = datos_recibidos.indexOf("RAM:") + 4; 
+      int ram_end = datos_recibidos.indexOf("|", ram_start); // Busca '|' después del inicio de RAM
+      ram_value = datos_recibidos.substring(ram_start, ram_end); 
+
+      // Extrae TEMP (desde "TMP:" + 4 hasta el final)
+      int temp_start = datos_recibidos.indexOf("TMP:") + 4; 
+      temp_value = datos_recibidos.substring(temp_start); 
+
+      Serial.println("Datos Recibidos: " + datos_recibidos);
+
+      // [6] Llamada a la función de dibujo
+      drawMetrics();
+    }
+  }
+  delay(50); // Pequeña pausa para no saturar
+}
+
+// [7] Función para dibujar todos los valores en la pantalla TFT
+void drawMetrics() {
+  tft.fillScreen(TFT_BLACK); // Limpia toda la pantalla
+
+  // --- 1. Título y Separador ---
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(2);
+  tft.drawString("MONITOR PC", 10, 5);
+  tft.drawFastHLine(0, 30, tft.width(), TFT_DARKGREY); // Línea divisoria
+
+  // --- 2. CPU ---
+  int cpu_color = TFT_GREEN;
+  // Si el uso es alto, cambia el color a amarillo o rojo
+  if (cpu_value.toFloat() > 70.0) cpu_color = TFT_RED;
+  else if (cpu_value.toFloat() > 40.0) cpu_color = TFT_YELLOW;
+
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_WHITE);
+  tft.drawString("CPU:", 10, 40);
+  tft.setTextSize(4); // Tamaño grande para el valor
+  tft.setTextColor(cpu_color);
+  tft.drawString(cpu_value + "%", 50, 45);
+
+  // --- 3. RAM ---
+  int ram_color = TFT_GREEN;
+  if (ram_value.toFloat() > 80.0) ram_color = TFT_RED;
+  else if (ram_value.toFloat() > 60.0) ram_color = TFT_YELLOW;
+
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_WHITE);
+  tft.drawString("RAM:", 10, 100);
+  tft.setTextSize(4);
+  tft.setTextColor(ram_color);
+  tft.drawString(ram_value + "%", 50, 105);
+
+  // --- 4. TEMPERATURA (En la parte inferior) ---
+  int temp_color = TFT_SKYBLUE;
+  if (temp_value.toFloat() > 75.0) temp_color = TFT_RED;
+  
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_WHITE);
+  tft.drawString("TEMP:", tft.width() - 80, 100); // Alineado a la derecha
+  tft.setTextSize(2);
+  tft.setTextColor(temp_color);
+  tft.drawString(temp_value + "C", tft.width() - 60, 115); 
+}ç
