@@ -1,0 +1,39 @@
+// Definición de pines
+const int pinPulsante = 34; // Pin de entrada (solo entrada)
+const int pinRele = 21;     // Pin de salida para el relé
+
+// Variable para almacenar el estado del pulsante
+int estadoPulsante = 0;
+
+void setup() {
+  // Inicializamos la comunicación serial a 115200 baudios
+  Serial.begin(115200);
+
+  // Configuración de pines
+  pinMode(pinPulsante, INPUT); // El pin 34 requiere resistencia externa
+  pinMode(pinRele, OUTPUT);    // Configurar el pin del relé como salida
+
+  // Aseguramos que el relé inicie apagado
+  digitalWrite(pinRele, LOW);
+  
+  Serial.println("Sistema iniciado. Esperando pulsación...");
+}
+
+void loop() {
+  // Leemos el estado del pulsante
+  estadoPulsante = digitalRead(pinPulsante);
+
+  // Si el pulsante está presionado (Lógica HIGH)
+  if (estadoPulsante == HIGH) {
+    digitalWrite(pinRele, HIGH);       // Encender relé
+    Serial.println("Rele activo");    // Mensaje en monitor serial
+    
+    // Antirrebote simple: esperamos a que se suelte el botón
+    while(digitalRead(pinPulsante) == HIGH) {
+      delay(10); 
+    }
+    
+    digitalWrite(pinRele, LOW);        // Apagar relé al soltar
+    Serial.println("Rele desactivado");
+  }
+}
